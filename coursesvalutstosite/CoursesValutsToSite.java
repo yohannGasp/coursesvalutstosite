@@ -20,12 +20,12 @@ import java.util.logging.SimpleFormatter;
  */
 public class CoursesValutsToSite {
 
-    public static final Logger log = Logger.getLogger("coursesvalutstosite.CoursesValutsToSite");
+    public static final Logger log = Logger.getLogger(CoursesValutsToSite.class.getName());
 
     public static void main(String[] args) throws InterruptedException, FileNotFoundException, NoSuchAlgorithmException, IOException {
         String old_hash;
         String new_hash = null;
-
+/* /baikalbank.bget.ru/public_html/courses.txt !!!!!!! */
         /* input parameters */
         getCourses gc = new getCourses();
         gc.FilenameOnLocalMachine = args[0]; // путь к файлу с курсами
@@ -34,12 +34,19 @@ public class CoursesValutsToSite {
         gc.user = args[3];                   // юзер
         gc.Password = args[4];               // пароль
         gc.Log = args[5];                    // логи
-
+        gc.FilenameOnLocalMachineXml = args[6]; // xml file
+        gc.PathOnFtpXml = args[7];           // путь FTP xml file
+        gc.fDebug = args[8];                 // debug FTP соединения
+        gc.connectionString = args[9];       // connectionString
+        gc.userCft = args[10];               // userCft
+        gc.passwordCft = args[11];           // passwordCft
+        gc.workDir = args[12];               // workDir
+       
         /*  Loger */
         FileHandler fh;
         fh = new FileHandler(gc.Log, true);
         fh.setFormatter(new SimpleFormatter());
-        fh.setEncoding("Cp866");
+        fh.setEncoding("UTF-8");
         log.addHandler(fh);
         log.setLevel(Level.ALL);
 

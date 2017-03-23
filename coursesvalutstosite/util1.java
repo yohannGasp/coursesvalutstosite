@@ -6,11 +6,13 @@
 package coursesvalutstosite;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Calendar;
+import java.util.logging.Level;
 import org.apache.commons.codec.digest.DigestUtils;
 
 /**
@@ -75,8 +77,23 @@ public class util1 {
             }
             result = sb.toString();
         } catch (IOException ex) {
-            System.out.println(ex.getMessage());
+            CoursesValutsToSite.log.log(Level.WARNING, ex.toString());
         }
         return result;
     }
+
+    /**
+     * create file flag
+     *
+     * @param type
+    */
+    public static void createFlagFile(String workDir, getCourses.typeFlag type) {
+        try {
+            File file1 = new File(workDir, type + ".flag");
+            file1.createNewFile();
+        } catch (IOException e) {
+            CoursesValutsToSite.log.log(Level.WARNING, e.toString());
+        }
+    }
+
 }

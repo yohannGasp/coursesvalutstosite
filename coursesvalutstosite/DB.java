@@ -5,14 +5,12 @@
  */
 package coursesvalutstosite;
 
-import java.io.FileReader;
-import java.io.IOException;
 import java.sql.CallableStatement;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.logging.Level;
 
 /**
  *
@@ -20,127 +18,91 @@ import java.sql.Statement;
  */
 public class DB {
 
-    private static final String CONNECTION_STRING = "jdbc:oracle:thin:@172.25.1.50:1521:BIB_PROD";
-    private static final String CONNECTION_LOGIN = "ibs";
-    private static final String CONNECTION_PASSWORD = "ibs1223";
+    private String connectionString;
+    private String userCft;
+    private String passwordCft;
 
-    private Connection conn;
-    public String SQL = "begin BIB_GET_KURS(?); end;";
-
-    /* Singletone */
-    Connection Connection() throws SQLException {
-        if (this.conn == null) {
-            java.sql.DriverManager.registerDriver(new oracle.jdbc.OracleDriver());
-            this.conn = java.sql.DriverManager.getConnection(CONNECTION_STRING, CONNECTION_LOGIN, CONNECTION_PASSWORD);
-        }
-        return this.conn;
-    }
+    public final String SQL = "begin BIB_GET_KURS(?); end;";
 
     /**
-     * querySet
      *
-     * @param Select_SQL - string query
-     * @return ResultSet
-     * @throws java.sql.SQLException
+     * @param connectionString
+     * @param userCft
+     * @param passwordCft
      */
-    public ResultSet ResultSet(String Select_SQL) {
-        ResultSet result = null;
-        try {
-            Statement statement = Connection().createStatement();
-            result = statement.executeQuery(Select_SQL);
-        } catch (SQLException ex) {
-            System.out.println(ex);
-        }
-        return result;
+    public DB(String connectionString, String userCft, String passwordCft) {
+        this.connectionString = connectionString;
+        this.userCft = userCft;
+        this.passwordCft = passwordCft;
     }
 
-    /**
-     * querySet for parameters
-     *
-     * @param Select_SQL - string query and parameters
-     * @return ResultSet
-     * @throws java.sql.SQLException
-     */
-    public ResultSet ResultSetPS(String Select_SQL,String[] param) throws SQLException {
-        PreparedStatement pstmt = Connection().prepareStatement(Select_SQL);
-        for (int i = 0; i < param.length; i++) {
-            pstmt.setString(i+1,param[i]);
-        }
-        ResultSet rs = pstmt.executeQuery();
-        return rs;
-    }
-
-    /**
-     * exec procedure in oracle
-     *
-     * @param SQL
-     * @return ResultSet
-     * @throws java.sql.SQLException
-     */
-    public ResultSet ExecProc(String SQL) throws SQLException {
-        ResultSet result = null;
-        try {
-            Statement stmt = Connection().createStatement();
-            stmt.executeQuery(SQL);
-            if (stmt.getMoreResults()) {
-                result = stmt.getResultSet();
-            }
-        } catch (SQLException ex) {
-            System.out.println(ex);
-        }
-        return result;
-    }
     /**
      * exec procedure in oracle with parameters
      *
      * @param SQL
      * @return ResultSet
-     * @throws java.sql.SQLException
      */
-    public ResultSet ExecProcPS(String SQL,String[] param) throws SQLException {
+    public ArrayList ExecProcPS(String SQL, String[] param) {
+
+        Connection connect = null;
+        CallableStatement statement = null;
         ResultSet result = null;
+
+        ArrayList<valuta> list = new ArrayList<>();
+
         try {
-            CallableStatement stmt = Connection().prepareCall(SQL);
+
+            System.setProperty("java.security.egd", "file:///dev/urandom"); //http://blockdump.blogspot.ru/2012/07/connection-problems-inbound-connection.html
+
+            java.sql.DriverManager.registerDriver(new oracle.jdbc.OracleDriver());
+            connect = java.sql.DriverManager.getConnection(this.connectionString, this.userCft, this.passwordCft);
+
+            /* add parameters */
+            statement = connect.prepareCall(SQL);
             for (int i = 0; i < param.length; i++) {
-                stmt.setString(i+1,param[i]);
+                statement.setString(i + 1, param[i]);
             }
-            stmt.execute();
-            if (stmt.getMoreResults()) {
-                result = stmt.getResultSet();
+
+            statement.execute();
+            if (statement.getMoreResults()) {
+
+                result = statement.getResultSet();
+
+                while (result.next()) {
+
+                    list.add(new valuta(result.getString(1),
+                            result.getString(2),
+                            result.getString(3),
+                            result.getString(4),
+                            result.getString(5),
+                            result.getString(6),
+                            result.getString(7)));
+
+                }
+
             }
+
         } catch (SQLException ex) {
-            System.out.println(ex);
-        }
-        return result;
-    }
 
-    /**
-     * close connection
-     * @throws java.sql.SQLException
-     */
-    public void Close() throws SQLException{
-        if (this.conn != null) {
-            this.conn.close();
-        }
-    }
+            util1.createFlagFile(getCourses.workDir, getCourses.typeFlag.SQL_ERROR);
+            CoursesValutsToSite.log.log(Level.WARNING, ex.toString());
 
-    /**
-     * queryfromFile
-     *
-     * @param fileName
-     * @return String
-     */
-    private String queryfromFile(String fileName) {
-        String Result = "";
-        try (FileReader reader = new FileReader(fileName)) {
-            int c;
-            while ((c = reader.read()) != -1) {
-                Result += (char) c;
+        } finally {
+
+            try {
+
+                result.close();
+                statement.close();
+                connect.close();
+
+            } catch (SQLException ex) {
+
+                util1.createFlagFile(getCourses.workDir, getCourses.typeFlag.SQL_ERROR);
+                CoursesValutsToSite.log.log(Level.WARNING, "close connect " + ex.toString());
             }
-        } catch (IOException ex) {
-            Result += ex.getMessage();
+
         }
-        return Result;
+        return list;
     }
 
 }
